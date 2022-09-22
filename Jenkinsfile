@@ -11,7 +11,7 @@ pipeline {
                 echo 'Hello World'
                 script{
                     print("代码扫描")
-                    tools.PrintMes("******this is my lib.******")
+                    tools.PrintMes("******this is my lib.代码扫描******",'green')
                 }
             }
         }
