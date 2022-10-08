@@ -1,5 +1,9 @@
 #!groovy
 
+@Library('jenkinslibrary') _
+
+def build = new org.devops.build()
+
 String buildShell = "${env.buildShell}"
 
 pipeline{
@@ -11,16 +15,17 @@ pipeline{
   //agent any
   
   stages{
-    stage("MavenBuild"){
+    stage("build"){
       steps{
         script{
-          mvnHOME = tool "M2"
-          sh "${mvnHOME}/bin/mvn ${buildShell}"
+          //mvnHOME = tool "M2"
+          //sh "${mvnHOME}/bin/mvn ${buildShell}"
+          build.Build(buildType,buildShell)
         }
       }
     }
 
-    stage("AntBuild"){
+    /*stage("AntBuild"){
       steps{
         script{
           try{
@@ -49,6 +54,6 @@ pipeline{
           sh "${npmHome}/bin/npm ${buildShell}"
         }
       }
-    }
+    }*/
   }
 }
