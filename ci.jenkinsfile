@@ -1,6 +1,6 @@
 #!groovy
 
-@Library('jenkinslibrary') _
+@Library('jenkinslib') _
 
 def build = new org.devops.build()
 
