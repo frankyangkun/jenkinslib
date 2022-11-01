@@ -31,6 +31,11 @@ pipeline{
       steps{
         script{
           tools.PrintMes("获取父工程代码","green")
+          if("${runOpts}"== "GitlabPush"){
+            branchName = branch - "refs/heads/"
+          }
+          println("$branchName")
+          
           String parentName = build.getProjectName(srcUrl_parent) //relativeTargetDir必须使用双引号才能获取到值，此时是下载代码，必须使用.git后缀
           checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${parentName}"]], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_parent}']]])
          //修改项目目录名称（去掉.git后缀）
