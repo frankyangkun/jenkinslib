@@ -7,6 +7,13 @@ def build = new org.devops.build()
 //def deploy = new org.devops.deploy()
 def tools = new org.devops.tools()
 def gitlab = new org.devops.gitlab()
+def sonar=new org.devops.sonarqube()
+
+//不一定非要commit操作才能触发，手动执行也可触发
+def runOpts 
+//换成gitee时，无法获取gitlab的webhook中的projectId，和commitSha，定义一个空的测试用
+def projectId
+def commitSha
 
 //env
 String buildType = "${env.buildType}"
@@ -45,15 +52,15 @@ pipeline{
           println("$branchName")*/
           
           String parentName = build.getProjectName(srcUrl_parent) //relativeTargetDir必须使用双引号才能获取到值，此时是下载代码，必须使用.git后缀
-          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${parentName}"]], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_parent}']]])
-         //修改项目目录名称（去掉.git后缀）
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${parentName}"]], userRemoteConfigs: [[credentialsId: 'yk-gitee', url: '${srcUrl_parent}']]])
+         //修改项目目录名称（去掉.git后缀）ffc90a2b-5b01-4ff7-93db-c4e805083471
           String parentName2 = build.getProjectName2(srcUrl_parent) //获取项目名，已经去掉.git
           build.modifyProjectDirName(srcUrl_parent,parentName2) //修改parent目录名（去掉.git后缀）
           
           tools.PrintMes("获取接口工程代码","green")
           String interfaceName = build.getProjectName(srcUrl_interface)
           //checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_interface}']]])
-          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${interfaceName}"]], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_interface}']]])
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${interfaceName}"]], userRemoteConfigs: [[credentialsId: 'yk-gitee', url: '${srcUrl_interface}']]])
           //修改项目目录名称（去掉.git后缀）
           String interfaceName2 = build.getProjectName2(srcUrl_interface) //获取项目名，已经去掉.git
           build.modifyProjectDirName(srcUrl_interface,interfaceName2) //修改interface目录名（去掉.git后缀）
@@ -61,7 +68,7 @@ pipeline{
           tools.PrintMes("获取生产端代码","green")
           String providerName = build.getProjectName(srcUrl_provider)
           //checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_provider}']]])
-          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${providerName}"]], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_provider}']]])
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${providerName}"]], userRemoteConfigs: [[credentialsId: 'yk-gitee', url: '${srcUrl_provider}']]])
           //修改项目目录名称（去掉.git后缀）
           String providerName2 = build.getProjectName2(srcUrl_provider) //获取项目名，已经去掉.git
           build.modifyProjectDirName(srcUrl_provider,providerName2) //修改provider目录名（去掉.git后缀）
@@ -69,13 +76,14 @@ pipeline{
           tools.PrintMes("获取消费端代码","green")
           String consumerName = build.getProjectName(srcUrl_consumer)
           //checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_consumer}']]])
-          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${consumerName}"]], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_consumer}']]])
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${consumerName}"]], userRemoteConfigs: [[credentialsId: 'yk-gitee', url: '${srcUrl_consumer}']]])
           //修改项目目录名称（去掉.git后缀）
           String consumerName2 = build.getProjectName2(srcUrl_consumer) //获取项目名，已经去掉.git
           build.modifyProjectDirName(srcUrl_consumer,consumerName2) //修改consumer目录名（去掉.git后缀）
         }
       }
     }
+
     /*stage("拉取并构建 interface"){
       steps{
         script{
@@ -150,6 +158,36 @@ pipeline{
         }
       }
     }
+
+    stage("SonarQube代码扫描"){
+        steps{
+            script{
+                tools.PrintMes("代码扫描","green")
+
+                String interfaceName = build.getProjectName2(srcUrl_interface)
+                String interfaceWorkspace = "${env.WORKSPACE}/${interfaceName}"
+                
+                String providerName = build.getProjectName2(srcUrl_provider)
+                String providerWorkspace = "${env.WORKSPACE}/${providerName}"
+                
+                String consumerName = build.getProjectName2(srcUrl_consumer)
+                String consumerWorkspace = "${env.WORKSPACE}/${consumerName}"
+
+                dir("${interfaceWorkspace}"){
+                    tools.PrintMes("执行interface代码扫描","blue")
+                    sonar.SonarScan("test","${interfaceName}","${interfaceName}","src") 
+                }
+                dir("${providerWorkspace}"){
+                    tools.PrintMes("执行provider代码扫描","blue")
+                    sonar.SonarScan("test","${providerName}","${providerName}","src") 
+                }
+                dir("${consumerWorkspace}"){
+                    tools.PrintMes("执行consumer代码扫描","blue")
+                    sonar.SonarScan("test","${consumerName}","${consumerName}","src") 
+                }
+            }
+        }
+    }
     /*stage("AntBuild"){
       steps{
         script{
@@ -188,19 +226,20 @@ pipeline{
     success{
       script{
         println("success..")
-        gitlab.ChangeCommitStatus(projectId,commitSha,"success")
+        //换成gitee时，无法获取gitlab的webhook中的projectId，注释掉
+        //gitlab.ChangeCommitStatus(projectId,commitSha,"success")
       }
     }
     failure{
       script{
         println("failure..")
-        gitlab.ChangeCommitStatus(projectId,commitSha,"failed")
+        //gitlab.ChangeCommitStatus(projectId,commitSha,"failed")
       }
     }
     aborted{
       script{
         println("aborted..")
-        gitlab.ChangeCommitStatus(projectId,commitSha,"canceled")
+        //gitlab.ChangeCommitStatus(projectId,commitSha,"canceled")
       }
     }
   }
