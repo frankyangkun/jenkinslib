@@ -8,6 +8,7 @@ def build = new org.devops.build()
 def tools = new org.devops.tools()
 def gitlab = new org.devops.gitlab()
 def sonar=new org.devops.sonarqube()
+def k8s = new org.devops.kubernetes()
 
 //不一定非要commit操作才能触发，手动执行也可触发
 def runOpts 
@@ -114,7 +115,28 @@ pipeline{
         }
       }
     }*/
-    stage("项目构建"){
+    stage("Vue前端项目构建"){
+        steps{
+            script{
+                tools.PrintMes("开始Vue前端项目构建","green")
+                /*docker.image('node:10.19.0-alpine').inside('-u 0:0 -v /var/jenkins_home/.npm:/root/.npm'){
+                  sh """
+                     id
+                     ls /root/.npm
+                     ls -al /root
+                     npm config set unsafe-perm=true
+                     npm config list
+                     npm config set cache /root/.npm
+                     npm cnofig list
+                     ls
+                     cd demo && npm install --unsafe-perm=true && npm run build && ls -l dist/ && sleep 15
+                  """
+
+                }*/
+            }
+        }
+    }
+    stage("后端项目构建"){
       steps{
         script{
           tools.PrintMes("开始项目构建","green")
@@ -188,6 +210,44 @@ pipeline{
             }
         }
     }
+    stage("构建docker镜像"){
+        steps{
+            script{
+                tools.PrintMes("构建docker镜像","green")
+                /*sh """
+                   #构建docker镜像
+                   cd demo
+                   docker build -t demo/demo-web-app:1.1.1_xxx1 .
+                   #上传镜像到dockerhub或harbor
+                   docker push demo/demo-web-app:1.1.1_xxx1
+                """*/
+                k8s.GetDeployment("jenkins-storageclass","my-jenkins")
+
+            }
+        }
+    }
+    stage("UI自动化测试"){
+        steps{
+            script{
+                tools.PrintMes("UI自动化测试","green")
+            }
+        }
+    }
+    stage("接口自动化测试"){
+        steps{
+            script{
+                tools.PrintMes("接口自动化测试","green")
+            }
+        }
+    }
+    stage("版本发布"){
+        steps{
+            script{
+                tools.PrintMes("版本发布","green")
+            }
+        }
+    }       
+    
     /*stage("AntBuild"){
       steps{
         script{
