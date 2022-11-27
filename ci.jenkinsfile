@@ -289,19 +289,19 @@ pipeline{
       script{
         println("success..")
         //换成gitee时，无法获取gitlab的webhook中的projectId，注释掉
-        //gitlab.ChangeCommitStatus(projectId,commitSha,"success")
+        gitlab.ChangeCommitStatus(projectId,commitSha,"success")
       }
     }
     failure{
       script{
         println("failure..")
-        //gitlab.ChangeCommitStatus(projectId,commitSha,"failed")
+        gitlab.ChangeCommitStatus(projectId,commitSha,"failed")
       }
     }
     aborted{
       script{
         println("aborted..")
-        //gitlab.ChangeCommitStatus(projectId,commitSha,"canceled")
+        gitlab.ChangeCommitStatus(projectId,commitSha,"canceled")
       }
     }
   }
