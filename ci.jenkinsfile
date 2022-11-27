@@ -53,7 +53,7 @@ pipeline{
           println("$branchName")*/
           
           String parentName = build.getProjectName(srcUrl_parent) //relativeTargetDir必须使用双引号才能获取到值，此时是下载代码，必须使用.git后缀
-          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${parentName}"]], userRemoteConfigs: [[credentialsId: 'yk-gitee', url: '${srcUrl_parent}']]])
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${parentName}"]], userRemoteConfigs: [[credentialsId: 'gitlab-privatekey', url: '${srcUrl_parent}']]])
          //修改项目目录名称（去掉.git后缀）ffc90a2b-5b01-4ff7-93db-c4e805083471
           String parentName2 = build.getProjectName2(srcUrl_parent) //获取项目名，已经去掉.git
           build.modifyProjectDirName(srcUrl_parent,parentName2) //修改parent目录名（去掉.git后缀）
@@ -61,7 +61,7 @@ pipeline{
           tools.PrintMes("获取接口工程代码","green")
           String interfaceName = build.getProjectName(srcUrl_interface)
           //checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_interface}']]])
-          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${interfaceName}"]], userRemoteConfigs: [[credentialsId: 'yk-gitee', url: '${srcUrl_interface}']]])
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${interfaceName}"]], userRemoteConfigs: [[credentialsId: 'gitlab-privatekey', url: '${srcUrl_interface}']]])
           //修改项目目录名称（去掉.git后缀）
           String interfaceName2 = build.getProjectName2(srcUrl_interface) //获取项目名，已经去掉.git
           build.modifyProjectDirName(srcUrl_interface,interfaceName2) //修改interface目录名（去掉.git后缀）
@@ -69,7 +69,7 @@ pipeline{
           tools.PrintMes("获取生产端代码","green")
           String providerName = build.getProjectName(srcUrl_provider)
           //checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_provider}']]])
-          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${providerName}"]], userRemoteConfigs: [[credentialsId: 'yk-gitee', url: '${srcUrl_provider}']]])
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${providerName}"]], userRemoteConfigs: [[credentialsId: 'gitlab-privatekey', url: '${srcUrl_provider}']]])
           //修改项目目录名称（去掉.git后缀）
           String providerName2 = build.getProjectName2(srcUrl_provider) //获取项目名，已经去掉.git
           build.modifyProjectDirName(srcUrl_provider,providerName2) //修改provider目录名（去掉.git后缀）
@@ -77,7 +77,7 @@ pipeline{
           tools.PrintMes("获取消费端代码","green")
           String consumerName = build.getProjectName(srcUrl_consumer)
           //checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_consumer}']]])
-          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${consumerName}"]], userRemoteConfigs: [[credentialsId: 'yk-gitee', url: '${srcUrl_consumer}']]])
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${consumerName}"]], userRemoteConfigs: [[credentialsId: 'gitlab-privatekey', url: '${srcUrl_consumer}']]])
           //修改项目目录名称（去掉.git后缀）
           String consumerName2 = build.getProjectName2(srcUrl_consumer) //获取项目名，已经去掉.git
           build.modifyProjectDirName(srcUrl_consumer,consumerName2) //修改consumer目录名（去掉.git后缀）
