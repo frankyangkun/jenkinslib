@@ -1,6 +1,10 @@
 #!groovy
 
 @Library('jenkinslib') _
+def build = new org.devops.build()
+//def deploy = new org.devops.deploy()
+def tools = new org.devops.tools()
+
 
 pipeline{
   agent{
