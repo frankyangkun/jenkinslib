@@ -231,7 +231,7 @@ pipeline{
                 
                 //上传部署文件到Gitlab
                 def versionDate = sh returnStdout: true, script: 'date +%Y%m%d%H%M%S'
-                versionDate = versionDate - "\n"
+                versionName = versionDate - "\n"
 
                 gitlab.CreateRepoFile(80,"demo-uat%2f${versionName}-uat.yaml",base64Content)
             }
