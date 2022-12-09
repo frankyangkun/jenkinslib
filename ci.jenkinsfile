@@ -11,10 +11,10 @@ def sonar=new org.devops.sonarqube()
 def k8s = new org.devops.kubernetes()
 
 //不一定非要commit操作才能触发，手动执行也可触发
-def runOpts 
+//def runOpts 
 //换成gitee时，无法获取gitlab的webhook中的projectId，和commitSha，定义一个空的测试用
-def projectId
-def commitSha
+//def projectId
+//def commitSha
 
 //env
 String buildType = "${env.buildType}"
