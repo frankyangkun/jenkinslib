@@ -26,7 +26,7 @@ def ChangeCommitStatus(projectId,commitSha,status){
 //新建仓库文件（在k8s部署的应用的yaml部署文件）
 def CreateRepoFile(projectId,filePath,fileContent){
     apiUrl = "projects/${projectId}/repository/files/${filePath}"
-    reqBody = """{"branch": "master", "encoding":"base64", "content": ${fileContent}, "commit_message": "create a new file"}"""
+    reqBody = """{"branch": "master", "encoding":"base64", "content": "${fileContent}", "commit_message": "create a new file"}"""
     response = HttpReq('POST',apiUrl,reqBody)
     println(response)
 }
