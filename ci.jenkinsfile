@@ -235,7 +235,7 @@ pipeline{
                 def versionDate = sh returnStdout: true, script: 'date +%Y%m%d%H%M%S'
                 versionName = versionDate - "\n"
 
-                gitlab.CreateRepoFile(80,"demo-uat/${versionName}-uat.yaml",base64Content)
+                gitlab.CreateRepoFile(80,"demo-uat%2f${versionName}-uat.yaml",base64Content)
             }
         }
     }
