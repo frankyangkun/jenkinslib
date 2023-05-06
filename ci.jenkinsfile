@@ -279,9 +279,9 @@ spec:
             mvn -v
             kubectl version
             #echo "export PATH='/usr/local/bin/:$PATH'" >> /etc/profile
-            #kubectl get pod -n devops -o wide
-            kubectl get pod -n kube-system -o wide
             kubectl get pod -n devops -o wide
+            #kubectl get pod -n kube-system -o wide #必须将jenkins.yaml sa改成clusterrole
+            #kubectl get pod -n devops -o wide
           """
         }
       }
@@ -322,17 +322,24 @@ spec:
             stage("构建docker镜像"){
                 steps{
                     script{
-                        tools.PrintMes("构建docker镜像","green")
-                        env.serviceName = "${JOB_NAME}".split("_")[0]
-                        withCredentials([usernamePassword(credentialsId:'aliyun-registry-admin',passwordVariable:'password',usernameVariable:'username')])
-                            sh """
-                                docker login -u ${username} -p ${password} registry.cn-beijing.aliyun.com
-                                docker build -t registry.cn-beijing.aliyun.com/devopstest/${serviceName}:${branchName}
-                                sleep 1
-                                docker push registry.cn-beijing.aliyun.com/devopstest/${serviceName}:${branchName}
-                                sleep 1
-                                docker rmi registry.cn-beijing.aliyun.com/devopstest/${serviceName}:${branchName}
-                            """
+                      tools.PrintMes("构建docker镜像","green")
+                      env.serviceName = "${JOB_NAME}".split("_")[0]
+                      def imgversionDate = sh returnStdout: true, script: 'date +%Y%m%d%H%M%S'
+                      imgversionName = imgversionDate - "\n"
+                      String providerName = build.getProjectName2(srcUrl_provider)
+                      withCredentials([usernamePassword(credentialsId:'dockerhub-userpass',passwordVariable:'password',usernameVariable:'username')]){
+                        sh"""
+                          pwd
+                          ls ..
+                          ls
+                          java -version
+                          docker -v
+                          docker login -u ${username} -p ${password}
+                          docker build -t frankyang1988/microservicedemo2022:${serviceName}-${branchName}-${imgversionName} ./${providerName}
+                          docker push frankyang1988/microservicedemo2022:${serviceName}-${branchName}-${imgversionName}
+                          docker rmi frankyang1988/microservicedemo2022:${serviceName}-${branchName}-${imgversionName}
+                        """
+                      }
                     }
                 }
             }
@@ -340,7 +347,7 @@ spec:
         }
     }
 
-    stage("获取k8s pod部署文件并上传"){
+    stage("获取k8s pod部署文件并上传gitlab"){
         steps{
             script{
                 tools.PrintMes("获取k8s pod部署文件并上传","green")
@@ -352,7 +359,7 @@ spec:
                    docker push demo/demo-web-app:1.1.1_xxx1
                 """*/
                 //获取k8s的应用yaml部署文件
-                response = k8s.GetDeployment("jenkins-storageclass","my-jenkins")
+                response = k8s.GetDeployment("devops","jenkinsagentkubetest")
                 response = response.content
 
                 //文件转换
@@ -364,7 +371,7 @@ spec:
                 def versionDate = sh returnStdout: true, script: 'date +%Y%m%d%H%M%S'
                 versionName = versionDate - "\n"
 
-                gitlab.CreateRepoFile(6,"demo-uat%2f${versionName}-uat.yaml",base64Content)
+                gitlab.CreateRepoFile(15,"demo-uat%2f${versionName}-uat.yaml",base64Content)
             }
         }
     }
