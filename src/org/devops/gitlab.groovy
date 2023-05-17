@@ -36,3 +36,12 @@ def GetRepoFile(projectId,filePath){
     response = HttpReq('GET',apiUrl,'')
     return response.content
 }
+
+//更新文件内容
+def UpdateRepoFile(projectId,filePath,fileContent){
+    apiUrl = "/projects/${projectId}/repository/files/${filePath}"
+    reqBody = """{"branch": "main", "encoding":"base64", "content": "${fileContent}", "commit_message": "update a new file"}"""
+    response = HttpReq('PUT',apiUrl,reqBody)
+    println(response)
+}
+
