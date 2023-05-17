@@ -24,3 +24,10 @@ def GetDeployment(nameSpace,deployName){
     //println(datas)
     return response
 }
+
+//更新Deployment
+def UpdateDeployment(nameSpace,deployName,deployBody){
+    apiUrl = "/apis/apps/v1/namespaces/${nameSpace}/deployments/${deployName}"
+    response = HttpReq('PUT',apiUrl,deployBody)
+    println(response)
+}
