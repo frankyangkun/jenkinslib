@@ -393,6 +393,12 @@ spec:
         steps{
             script{
                 tools.PrintMes("版本发布","green")
+                //下载版本库文件
+                //releaseVersion = "${branchName}".split("-")[-1]
+                releaseVersion = "${branchName}"
+                response = gitlab.GetRepoFile(11,"demo-uat%2f${releaseVersion}.yaml")
+                println(response)
+
             }
         }
     }       
