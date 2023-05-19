@@ -1,0 +1,484 @@
+#!groovy
+
+@Library('jenkinslib') _
+
+//func from share library
+def build = new org.devops.build()
+//def deploy = new org.devops.deploy()
+def tools = new org.devops.tools()
+def gitlab = new org.devops.gitlab()
+def sonar=new org.devops.sonarqube()
+def k8s = new org.devops.kubernetes()
+
+//不一定非要commit操作才能触发，手动执行也可触发
+//def runOpts 
+//换成gitee时，无法获取gitlab的webhook中的projectId，和commitSha，定义一个空的测试用
+//def projectId
+//def commitSha
+
+//env
+String buildType = "${env.buildType}"
+String buildShell = "${env.buildShell}"
+
+String srcUrl_parent = "${env.srcUrl_parent}"
+String srcUrl_interface = "${env.srcUrl_interface}"
+String srcUrl_provider = "${env.srcUrl_provider}"
+String srcUrl_consumer = "${env.srcUrl_consumer}"
+String branchName = "${env.branchName}"
+
+if("${runOpts}"== "GitlabPush"){
+    branchName = branch - "refs/heads/"
+    currentBuild.description = "Trigger by ${username} ${branchName}"
+    gitlab.ChangeCommitStatus(projectId,commitSha,"running")
+}
+println("$branchName")
+
+//pipeline
+pipeline{
+  agent{
+    /*node{
+      label 'node03'
+    }*/
+    kubernetes{
+      //inheritFrom 'maven-3.8.1' //没用
+      //label 'jenkinsagent'
+      label "jenkins-slave-jnlp2"
+      cloud 'kubernetes'
+      yaml '''
+---
+kind: Pod #Deployment改成Pod
+apiVersion: v1 #apps/v1改成v1
+metadata:
+  labels:
+    #jenkins3: slave3 
+    app: jenkinsagent #随便定义，不一定要和k8s插件自带的jenkins:slave一致
+  name: jenkinsagent #这个name加不加都不影响
+  namespace: devops
+spec:
+  #nodeName: node2
+  containers:
+    #- name: jenkinsagent
+    - name: jnlp #必须是jnlp
+      #image: jenkins/inbound-agent:3107.v665000b_51092-4 #这是jenkins slave专用的镜像,不能用jenkins原来的镜像
+      #image: jenkinsci/jnlp-slave:3.36-1
+      image: frankyang1988/jenkinsslave-maven:0328 #二次打包的jenkins/inbound-agent:3107.v665000b_51092-4镜像，包含了mvn
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        runAsUser: 0
+        privileged: true
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 512Mi
+      volumeMounts:
+        - name: jenkinsagent-workdir
+          #mountPath: /home/jenkins/agent/remoting
+          mountPath: /home/jenkins/workspace
+        #- name: buildtools 此方法失败，最终改为二次打包slave镜像，包含mvn
+        #  mountPath: /home/jenkins/buildtools
+        - name: docker
+          mountPath: /run/docker.sock
+        - name: docker-home
+          mountPath: /usr/bin/docker
+        - name: daemon
+          mountPath: /etc/docker
+        - name: kubectl-config
+          mountPath: /home/jenkins/.kube
+        - name: kubectl
+          mountPath: /usr/bin/kubectl
+        - name: maven-localrepo
+          mountPath: /root/.m2/repository
+      env: #定义全局的环境变量
+        - name: JENKINS_AGENT_WORKDIR
+          #value: /home/jenkins/agent/remoting
+          value: /home/jenkins/workspace
+  volumes:
+    - name: maven-localrepo
+      hostPath:
+        path: /root/data/devops/mavenlocalrepo
+        type: Directory
+    - name: jenkinsagent-workdir
+      hostPath:
+        path: /root/data/devops/jenkinsagent-workdir
+        type: Directory
+    #- name: buildtools 此方法失败，最终改为二次打包slave镜像，包含mvn
+    #  hostPath:
+    #    path: /usr/local/buildtools
+    #    type: Directory
+    - name: docker
+      hostPath:
+        path: /run/docker.sock
+        type: ""
+    - name: docker-home
+      hostPath:
+        path: /usr/bin/docker
+        type: ""
+    - name: daemon
+      hostPath:
+        path: /etc/docker
+        type: ""
+    - name: kubectl-config
+      hostPath:
+        path: /root/.kube
+        type: Directory
+    - name: kubectl
+      hostPath:
+        path: /usr/bin/kubectl
+        type: ""
+  serviceAccountName: jenkins
+
+'''
+    }
+  }
+  //agent any
+  
+  stages{
+    stage("拉取代码"){
+      steps{
+        script{
+          tools.PrintMes("获取父工程代码","green")
+          /*if("${runOpts}"== "GitlabPush"){
+            branchName = branch - "refs/heads/"
+          }
+          println("$branchName")*/
+          
+          String parentName = build.getProjectName(srcUrl_parent) //relativeTargetDir必须使用双引号才能获取到值，此时是下载代码，必须使用.git后缀
+          //修改项目目录名称（去掉.git后缀）ffc90a2b-5b01-4ff7-93db-c4e805083471
+          String parentName2 = build.getProjectName2(srcUrl_parent) //获取项目名，已经去掉.git
+          String parentBranchName = parentName2 + "-1.0"
+          println("parentBranchName是："+parentBranchName)
+          
+
+          /*
+          checkout([$class: 'GitSCM', branches: [[name: '${parentBranchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${parentName}"]], userRemoteConfigs: [[credentialsId: 'xxx', url: '${srcUrl_parent}']]])
+         ////修改项目目录名称（去掉.git后缀）ffc90a2b-5b01-4ff7-93db-c4e805083471
+          //String parentName2 = build.getProjectName2(srcUrl_parent) //获取项目名，已经去掉.git
+          build.modifyProjectDirName(srcUrl_parent,parentName2) //修改parent目录名（去掉.git后缀）
+          sh"""
+            pwd
+            ls
+          """
+          */
+          
+          tools.PrintMes("获取接口工程代码","green")
+          //修改项目目录名称（去掉.git后缀）
+          String interfaceName2 = build.getProjectName2(srcUrl_interface) //获取项目名，已经去掉.git
+          String interfaceName = build.getProjectName(srcUrl_interface)
+          String interfaceBranchName = interfaceName2 + "-1.0"
+          //checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_interface}']]])
+          println("interfaceBranchName是："+interfaceBranchName)
+          println("env.branchName是："+branchName)
+
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${interfaceName}"]], userRemoteConfigs: [[credentialsId: 'gitlab-privatekey', url: '${srcUrl_interface}']]])
+          sh"""
+            pwd
+            ls
+          """
+          ////修改项目目录名称（去掉.git后缀）
+          //String interfaceName2 = build.getProjectName2(srcUrl_interface) //获取项目名，已经去掉.git
+          build.modifyProjectDirName(srcUrl_interface,interfaceName2) //修改interface目录名（去掉.git后缀）
+         
+          tools.PrintMes("获取生产端代码","green")
+          String providerName = build.getProjectName(srcUrl_provider)
+          //checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_provider}']]])
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${providerName}"]], userRemoteConfigs: [[credentialsId: 'gitlab-userpass', url: '${srcUrl_provider}']]])
+          //修改项目目录名称（去掉.git后缀）
+          String providerName2 = build.getProjectName2(srcUrl_provider) //获取项目名，已经去掉.git
+          build.modifyProjectDirName(srcUrl_provider,providerName2) //修改provider目录名（去掉.git后缀）
+          
+          tools.PrintMes("获取消费端代码","green")
+          String consumerName = build.getProjectName(srcUrl_consumer)
+          //checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_consumer}']]])
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${consumerName}"]], userRemoteConfigs: [[credentialsId: 'jenkins-privatekey', url: '${srcUrl_consumer}']]])
+          //修改项目目录名称（去掉.git后缀）
+          String consumerName2 = build.getProjectName2(srcUrl_consumer) //获取项目名，已经去掉.git
+          build.modifyProjectDirName(srcUrl_consumer,consumerName2) //修改consumer目录名（去掉.git后缀）
+        }
+      }
+    }
+
+    /*stage("拉取并构建 interface"){
+      steps{
+        script{
+          tools.PrintMes("获取接口工程代码","green")
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_interface}']]])
+          tools.PrintMes("执行打包","green")
+          build.Build(buildType,buildShell)
+        }
+      }
+    }*/
+    /*stage("拉取并构建 provider"){
+      steps{
+        script{
+          tools.PrintMes("获取生产端代码","green")
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_provider}']]])
+          tools.PrintMes("执行打包","green")
+          build.Build(buildType,buildShell)
+        }
+      }
+    }*/
+    /*stage("拉取并构建 consumer"){
+      steps{
+        script{
+          tools.PrintMes("获取消费端代码","green")
+          checkout([$class: 'GitSCM', branches: [[name: '${branchName}']], extensions: [], userRemoteConfigs: [[credentialsId: 'fd1f2048-303b-42a2-8328-9e57063de47f', url: '${srcUrl_consumer}']]])
+          tools.PrintMes("执行打包","green")
+          build.Build(buildType,buildShell)
+        }
+      }
+    }*/
+    stage("Vue前端构建"){
+        steps{
+            script{
+                tools.PrintMes("开始Vue前端项目构建","green")
+                /*docker.image('node:10.19.0-alpine').inside('-u 0:0 -v /var/jenkins_home/.npm:/root/.npm'){
+                  sh """
+                     id
+                     ls /root/.npm
+                     ls -al /root
+                     npm config set unsafe-perm=true
+                     npm config list
+                     npm config set cache /root/.npm
+                     npm cnofig list
+                     ls
+                     cd demo && npm install --unsafe-perm=true && npm run build && ls -l dist/ && sleep 15
+                  """
+
+                }*/
+            }
+        }
+    }
+    stage("后端构建（编译/打包/单测）"){
+      steps{
+        script{
+          tools.PrintMes("开始项目构建","green")
+          String parentName = build.getProjectName2(srcUrl_parent)//已经去掉.git
+          String parentWorkspace = "${env.WORKSPACE}/${parentName}"
+          
+          String interfaceName = build.getProjectName2(srcUrl_interface)
+          String interfaceWorkspace = "${env.WORKSPACE}/${interfaceName}"
+          
+          String providerName = build.getProjectName2(srcUrl_provider)
+          String providerWorkspace = "${env.WORKSPACE}/${providerName}"
+          
+          String consumerName = build.getProjectName2(srcUrl_consumer)
+          String consumerWorkspace = "${env.WORKSPACE}/${consumerName}"
+          
+          dir("${parentWorkspace}"){
+            tools.PrintMes("执行parent打包","blue")
+            build.Build(buildType,buildShell)
+          }
+          
+          dir("${interfaceWorkspace}"){
+            tools.PrintMes("执行interface打包","blue")
+            build.Build(buildType,buildShell)
+          }
+          
+          dir("${providerWorkspace}"){
+            tools.PrintMes("执行provider打包","blue")
+            build.Build(buildType,buildShell)
+          }
+          
+          dir("${consumerWorkspace}"){
+            tools.PrintMes("执行consumer打包","blue")
+            build.Build(buildType,buildShell)
+          }
+          
+          
+          /*tools.PrintMes("执行打包","green")
+          //mvnHOME = tool "M2"
+          //sh "${mvnHOME}/bin/mvn ${buildShell}"
+          build.Build(buildType,buildShell)*/
+
+          sh"""
+            echo "=========动态生成jenkins slave==========="
+            id
+            docker -v
+            docker info
+            mvn -v
+            kubectl version
+            #echo "export PATH='/usr/local/bin/:$PATH'" >> /etc/profile
+            kubectl get pod -n devops -o wide
+            #kubectl get pod -n kube-system -o wide #必须将jenkins.yaml sa改成clusterrole
+            #kubectl get pod -n devops -o wide
+          """
+        }
+      }
+    }
+    //并行
+    stage("并行"){
+        parallel{
+            stage("SonarQube代码扫描"){
+                steps{
+                    script{
+                        tools.PrintMes("代码扫描","green")
+
+                        /*String interfaceName = build.getProjectName2(srcUrl_interface)
+                        String interfaceWorkspace = "${env.WORKSPACE}/${interfaceName}"
+
+                        String providerName = build.getProjectName2(srcUrl_provider)
+                        String providerWorkspace = "${env.WORKSPACE}/${providerName}"
+
+                        String consumerName = build.getProjectName2(srcUrl_consumer)
+                        String consumerWorkspace = "${env.WORKSPACE}/${consumerName}"
+
+                        dir("${interfaceWorkspace}"){
+                            tools.PrintMes("执行interface代码扫描","blue")
+                            sonar.SonarScan("test","${interfaceName}","${interfaceName}","src") 
+                        }
+                        dir("${providerWorkspace}"){
+                            tools.PrintMes("执行provider代码扫描","blue")
+                            sonar.SonarScan("test","${providerName}","${providerName}","src") 
+                        }
+                        dir("${consumerWorkspace}"){
+                            tools.PrintMes("执行consumer代码扫描","blue")
+                            sonar.SonarScan("test","${consumerName}","${consumerName}","src") 
+                        }*/
+                    }
+                }
+            }
+   
+            stage("构建docker镜像"){
+                steps{
+                    script{
+                      tools.PrintMes("构建docker镜像","green")
+                      env.serviceName = "${JOB_NAME}".split("_")[0]
+                      def imgversionDate = sh returnStdout: true, script: 'date +%Y%m%d%H%M%S'
+                      imgversionName = imgversionDate - "\n"
+                      String providerName = build.getProjectName2(srcUrl_provider)
+                      withCredentials([usernamePassword(credentialsId:'dockerhub-userpass',passwordVariable:'password',usernameVariable:'username')]){
+                        sh"""
+                          pwd
+                          ls ..
+                          ls
+                          java -version
+                          docker -v
+                          docker login -u ${username} -p ${password}
+                          docker build -t frankyang1988/microservicedemo2022:${serviceName}-${branchName}-${imgversionName} ./${providerName}
+                          docker push frankyang1988/microservicedemo2022:${serviceName}-${branchName}-${imgversionName}
+                          docker rmi frankyang1988/microservicedemo2022:${serviceName}-${branchName}-${imgversionName}
+                        """
+                      }
+                    }
+                }
+            }
+            
+        }
+    }
+
+    stage("获取k8s pod部署文件并上传gitlab"){
+        steps{
+            script{
+                tools.PrintMes("获取k8s pod部署文件并上传","green")
+                /*sh """
+                   #构建docker镜像
+                   cd demo
+                   docker build -t demo/demo-web-app:1.1.1_xxx1 .
+                   #上传镜像到dockerhub或harbor
+                   docker push demo/demo-web-app:1.1.1_xxx1
+                """*/
+                //获取k8s的应用yaml部署文件
+                response = k8s.GetDeployment("devops","jenkins")
+                response = response.content
+
+                //文件转换
+                base64Content = response.bytes.encodeBase64().toString()
+                println("====base64Content=====:")
+                println(base64Content)
+
+                //上传部署文件到Gitlab
+                def versionDate = sh returnStdout: true, script: 'date +%Y%m%d%H%M%S'
+                versionName = versionDate - "\n"
+
+                gitlab.CreateRepoFile(11,"demo-uat%2f${versionName}-uat.yaml",base64Content)
+            }
+        }
+    }
+    stage("UI自动化测试"){
+        steps{
+            script{
+                tools.PrintMes("UI自动化测试","green")
+            }
+        }
+    }
+    stage("接口自动化测试"){
+        steps{
+            script{
+                tools.PrintMes("接口自动化测试","green")
+            }
+        }
+    }
+    stage("版本发布"){
+        steps{
+            script{
+                tools.PrintMes("版本发布","green")
+
+                //下载版本库文件
+                //releaseVersion = "${branchName}".split("-")[-1]
+                releaseVersion = "${branchName}"
+                response = gitlab.GetRepoFile(11,"demo-uat%2f${releaseVersion}.yaml")
+                println(response)
+            }
+        }
+    }       
+    
+    /*stage("AntBuild"){
+      steps{
+        script{
+          try{
+            antHome = tool "ANT"
+            sh "${antHome}/bin/ant ${buildShell}"
+          }catch(e){
+            println(e)
+          }
+        }
+      }
+    }
+    stage("GradleBuild"){
+      steps{
+        script{
+          gradleHome = tool "GRADLE"
+          sh "${gradleHome}/bin/gradle ${buildShell}"
+        }
+      }
+    }
+    stage("NpmBuild"){
+      steps{
+        script{
+          npmHome = tool "NPM"
+          sh "${npmHome}/bin/npm ${buildShell}"
+        }
+      }
+    }*/
+  }
+  post{
+    always{
+      script{
+        println("always..")
+      }
+    }
+    success{
+      script{
+        println("success..")
+        //换成gitee时，无法获取gitlab的webhook中的projectId，注释掉
+        gitlab.ChangeCommitStatus(projectId,commitSha,"success")
+      }
+    }
+    failure{
+      script{
+        println("failure..")
+        gitlab.ChangeCommitStatus(projectId,commitSha,"failed")
+      }
+    }
+    aborted{
+      script{
+        println("aborted..")
+        gitlab.ChangeCommitStatus(projectId,commitSha,"canceled")
+      }
+    }
+  }
+}
+
