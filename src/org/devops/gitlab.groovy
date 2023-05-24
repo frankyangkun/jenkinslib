@@ -32,7 +32,7 @@ def CreateRepoFile(projectId,filePath,fileContent){
 }
 //获取文件内容
 def GetRepoFile(projectId,filePath){
-    apiUrl = "/projects/${projectId}/repository/files/${filePath}/raw"
+    apiUrl = "/projects/${projectId}/repository/files/${filePath}/raw?ref=main"
     response = HttpReq('GET',apiUrl,'')
     return response.content
 }
