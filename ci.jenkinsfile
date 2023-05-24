@@ -371,6 +371,7 @@ spec:
                 //上传部署文件到Gitlab
                 def versionDate = sh returnStdout: true, script: 'date +%Y%m%d%H%M%S'
                 env.versionName = versionDate - "\n"
+                println("当前yaml版本号：" + "uat-" + env.versionName)
 
                 gitlab.CreateRepoFile(7,"demo-uat%2fuat-${env.versionName}.yaml",base64Content)
             }
@@ -394,11 +395,37 @@ spec:
         steps{
             script{
                 tools.PrintMes("版本发布","green")
-                //下载版本库文件
+                //下载版本库文件(gitlab上uat里的yaml文件)
+                dockerImage = "ikubernetes/myapp:v2"
                 //releaseVersion = "${branchName}".split("-")[-1]
                 releaseVersion = "${env.versionName}"
                 response = gitlab.GetRepoFile(7,"demo-uat%2fuat-${releaseVersion}.yaml")
-                println(response)
+                println("---response---:"+response)
+
+                //替换文件中的内容（镜像）
+                fileData = readYaml text: """${response}"""
+                println(fileData)
+                println(fileData["spec"]["template"]["spec"]["containers"][0]["image"])
+                
+                //fileData["spec"]["template"]["spec"]["containers"][0]["image"] = dockerImage
+                //println(fileData["spec"]["template"]["spec"]["containers"][0]["image"])
+                //println("---fileData---:" + fileData)
+
+                oldImage = fileData["spec"]["template"]["spec"]["containers"][0]["image"]
+                response = response.replace(oldImage,dockerImage)
+                println("---newImage---:" + response)
+
+
+
+                //发布
+                //base64Content = fileData.bytes.encodeBase64().toString() //错误，filedata已经是json格式，不能转base64了
+                //response = response.content //reponse从gitlab.GetRepoFile()得到的已经是response.content了
+                
+                base64Content = response.bytes.encodeBase64().toString() //修改的是fileData，response是前面的老数据
+                gitlab.UpdateRepoFile(7,"demo-uat%2fuat-${releaseVersion}.yaml",base64Content)
+
+
+
 
             }
         }
