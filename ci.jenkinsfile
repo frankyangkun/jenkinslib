@@ -359,7 +359,8 @@ spec:
                    docker push demo/demo-web-app:1.1.1_xxx1
                 """*/
                 //获取k8s的应用yaml部署文件
-                response = k8s.GetDeployment("devops","jenkinsagentkubetest")
+                //response = k8s.GetDeployment("devops","jenkins")
+                response = k8s.GetDeployment("default","nginx-myapp")
                 response = response.content
 
                 //文件转换
@@ -369,9 +370,9 @@ spec:
 
                 //上传部署文件到Gitlab
                 def versionDate = sh returnStdout: true, script: 'date +%Y%m%d%H%M%S'
-                versionName = versionDate - "\n"
+                env.versionName = versionDate - "\n"
 
-                gitlab.CreateRepoFile(15,"demo-uat%2f${versionName}-uat.yaml",base64Content)
+                gitlab.CreateRepoFile(7,"demo-uat%2fuat-${env.versionName}.yaml",base64Content)
             }
         }
     }
@@ -395,8 +396,8 @@ spec:
                 tools.PrintMes("版本发布","green")
                 //下载版本库文件
                 //releaseVersion = "${branchName}".split("-")[-1]
-                releaseVersion = "${branchName}"
-                response = gitlab.GetRepoFile(11,"demo-uat%2f${releaseVersion}.yaml")
+                releaseVersion = "${env.versionName}"
+                response = gitlab.GetRepoFile(7,"demo-uat%2fuat-${releaseVersion}.yaml")
                 println(response)
 
             }
