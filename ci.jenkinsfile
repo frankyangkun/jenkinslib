@@ -327,9 +327,11 @@ spec:
                       def imgversionDate = sh returnStdout: true, script: 'date +%Y%m%d%H%M%S'
                       env.imgversionName = imgversionDate - "\n"
                       String providerName = build.getProjectName2(srcUrl_provider)
+                      String consumerName = build.getProjectName2(srcUrl_consumer)
                       withCredentials([usernamePassword(credentialsId:'dockerhub-userpass',passwordVariable:'password',usernameVariable:'username')]){
                         //dockerImage = "ikubernetes/myapp:v2"
-                        env.dockerImage = "frankyang1988/microservicedemo2022:${serviceName}-${branchName}-${env.imgversionName}"
+                        env.dockerImageProvider = "frankyang1988/microservicedemo2023provider:${serviceName}-${branchName}-${env.imgversionName}"
+                        env.dockerImageConsumer = "frankyang1988/microservicedemo2023consumer:${serviceName}-${branchName}-${env.imgversionName}"
                         sh"""
                           pwd
                           ls ..
@@ -337,9 +339,15 @@ spec:
                           java -version
                           docker -v
                           docker login -u ${username} -p ${password}
-                          docker build -t frankyang1988/microservicedemo2022:${serviceName}-${branchName}-${env.imgversionName} ./${providerName}
-                          docker push frankyang1988/microservicedemo2022:${serviceName}-${branchName}-${env.imgversionName}
-                          docker rmi frankyang1988/microservicedemo2022:${serviceName}-${branchName}-${env.imgversionName}
+                          docker build -t frankyang1988/microservicedemo2022provider:${serviceName}-${branchName}-${env.imgversionName} ./${providerName}
+                          docker build -t frankyang1988/microservicedemo2022consumer:${serviceName}-${branchName}-${env.imgversionName} ./${consumerName}
+
+                          docker push frankyang1988/microservicedemo2022provider:${serviceName}-${branchName}-${env.imgversionName}
+                          docker push frankyang1988/microservicedemo2022consumer:${serviceName}-${branchName}-${env.imgversionName}
+
+                          docker rmi frankyang1988/microservicedemo2022provider:${serviceName}-${branchName}-${env.imgversionName}
+                          docker rmi frankyang1988/microservicedemo2022consumer:${serviceName}-${branchName}-${env.imgversionName}
+
                         """
                       }
                     }
