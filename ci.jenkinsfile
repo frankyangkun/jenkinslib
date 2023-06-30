@@ -382,7 +382,7 @@ spec:
                 releaseVersion = "${env.imgversionName}" //env.versionName换成env.imgversionName
                 
                 //response = gitlab.GetRepoFile(6,"demo-uat%2fuat-${releaseVersion}.yaml")  
-                response = gitlab.GetRepoFile(11,"demo-uat%2f046provider.yaml") //名称写死就行了，直接获取uat上手动创建的模板文件
+                response = gitlab.GetRepoFile(11,"demo-uat%2fprovider046.yaml") //名称写死就行了，直接获取uat上手动创建的模板文件
 
                 println("---response---:"+response)
 
@@ -405,11 +405,11 @@ spec:
                 
                 base64Content = response.bytes.encodeBase64().toString() //response内容已经被替换成新的
                 //gitlab.UpdateRepoFile(6,"demo-uat%2fuat-${releaseVersion}.yaml",base64Content) //content参数要求String类型，所以toString转一下
-                gitlab.UpdateRepoFile(11,"demo-uat%2f046provider.yaml",base64Content)
+                gitlab.UpdateRepoFile(11,"demo-uat%2fprovider046.yaml",base64Content)
 
                 //发布到k8s
                 //k8s.UpdateDeployment("default","nginx-myapp",response)//k8s api中body参数类型是Deployment，就直接用response，不用转码
-                k8s.UpdateDeployment("default","046provider",response)
+                k8s.UpdateDeployment("default","provider046",response)
 
             }
         }
@@ -429,7 +429,7 @@ spec:
                 //获取k8s的应用yaml部署文件
                 //response = k8s.GetDeployment("devops","jenkins")
                 //response = k8s.GetDeployment("default","nginx-myapp")
-                response = k8s.GetDeployment("default","046provider")
+                response = k8s.GetDeployment("default","provider046")
                 response = response.content
 
                 //文件转换
