@@ -396,7 +396,7 @@ spec:
                 //println("---fileData---:" + fileData)
 
                 oldImage = fileData["spec"]["template"]["spec"]["containers"][0]["image"]
-                response = response.replace(oldImage,env.dockerImage)
+                response = response.replace(oldImage,env.dockerImageProvider)
                 println("---newImage---:" + response)
 
                 //更新gitlab uat版本库中原yaml的内容
