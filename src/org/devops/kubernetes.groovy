@@ -27,7 +27,7 @@ def GetDeployment(nameSpace,deployName){
 
 //更新Deployment
 def UpdateDeployment(nameSpace,deployName,deployBody){
-    apiUrl = "/apis/apps/v1/namespaces/${nameSpace}/deployments/${deployName}"
+    apiUrl = "namespaces/${nameSpace}/deployments/${deployName}"
     response = HttpReq('PUT',apiUrl,deployBody)
     println(response)
 }
