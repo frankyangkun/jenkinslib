@@ -6,7 +6,7 @@ def HttpReq(reqType,reqUrl,reqBody){
     withCredentials([string(credentialsId: 'kubernetes-token',variable: 'kubernetesToken')]){
       result = httpRequest customHeaders: [[maskValue: true, name: 'Authoriation', value: "Bearer ${kubernetesToken}"],[maskValue: false, name: 'Content-Type', value: 'application/yaml'],[maskValue: false, name: 'Accept',value:'application/yaml']],
                httpMode: reqType,
-               contentType: "TEXT_HTML",
+               //contentType: "TEXT_HTML",
                consoleLogResponseBody: true,
                ignoreSslErrors: true,
                requestBody: reqBody,
