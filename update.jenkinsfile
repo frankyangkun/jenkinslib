@@ -164,7 +164,12 @@ spec:
                 //生成最新版本的STAG版本文件
                 //文件转换，上传文件
                 base64Content = stagResponse.bytes.encodeBase64().toString()
-                gitlab.CreateRepoFile(11,"demo-stag%2f${releaseVersion}-stag.yaml",base64Content)
+                try{//如果文件存在，就不创建，而是更新
+                    gitlab.CreateRepoFile(11,"demo-stag%2f${releaseVersion}-stag.yaml",base64Content)
+                }catch(e){
+                    gitlab.UpdateRepoFile(11,"demo-stag%2f${releaseVersion}-stag.yaml",base64Content)
+                }
+                
             }
         }
     }
