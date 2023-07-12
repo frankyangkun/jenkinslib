@@ -409,7 +409,7 @@ spec:
 
                 //发布到k8s
                 //k8s.UpdateDeployment("default","nginx-myapp",response)//k8s api中body参数类型是Deployment，就直接用response，不用转码
-                k8s.UpdateDeployment("default","provider046",response)
+                k8s.UpdateDeployment("demo-uat","provider046",response)
 
             }
         }
@@ -429,7 +429,7 @@ spec:
                 //获取k8s的应用yaml部署文件
                 //response = k8s.GetDeployment("devops","jenkins")
                 //response = k8s.GetDeployment("default","nginx-myapp")
-                response = k8s.GetDeployment("default","provider046")
+                response = k8s.GetDeployment("demo-uat","provider046")
                 response = response.content
 
                 //文件转换
