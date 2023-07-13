@@ -9,7 +9,7 @@ def k8s = new org.devops.kubernetes()
 
 String updateType = "${env.updateType}"
 String releaseVersion = "${env.releaseVersion}"
-Integer projectId = 11
+Integer projectId = 6
 
 //pipeline
 pipeline{
@@ -123,7 +123,7 @@ spec:
                 tools.PrintMes("UAT->STAG","green")
 
                 //获取UAT中的images
-                response = gitlab.GetRepoFile(${projectId},"demo-uat%2f${releaseVersion}-uat.yaml")
+                response = gitlab.GetRepoFile(${projectId},"demo-uat%2fuat-${releaseVersion}.yaml")
                 fileData = readYaml text: """${response}"""
                 println(fileData["metadata"]["resourceVersion"])
                 println(fileData["spec"]["template"]["spec"]["containers"][0]["image"])
@@ -146,9 +146,9 @@ spec:
                 //文件转换，上传文件
                 base64Content = stagResponse.bytes.encodeBase64().toString()
                 try{//如果文件存在，就不创建，而是更新
-                    gitlab.CreateRepoFile(${projectId},"demo-stag%2f${releaseVersion}-stag.yaml",base64Content)
+                    gitlab.CreateRepoFile(${projectId},"demo-stag%2fstag-${releaseVersion}.yaml",base64Content)
                 }catch(e){
-                    gitlab.UpdateRepoFile(${projectId},"demo-stag%2f${releaseVersion}-stag.yaml",base64Content)
+                    gitlab.UpdateRepoFile(${projectId},"demo-stag%2fstag-${releaseVersion}.yaml",base64Content)
                 }
             }
         }
@@ -162,7 +162,7 @@ spec:
                 tools.PrintMes("STAG->PROD","green")
 
                 //获取STAG中的images
-                response = gitlab.GetRepoFile(${projectId},"demo-stag%2f${releaseVersion}-stag.yaml")
+                response = gitlab.GetRepoFile(${projectId},"demo-stag%2fstag-${releaseVersion}.yaml")
                 fileData = readYaml text: """${response}"""
                 println(fileData["metadata"]["resourceVersion"])
                 println(fileData["spec"]["template"]["spec"]["containers"][0]["image"])
@@ -185,9 +185,9 @@ spec:
                 //文件转换，上传文件
                 base64Content = prodResponse.bytes.encodeBase64().toString()
                 try{//如果文件存在，就不创建，而是更新
-                    gitlab.CreateRepoFile(${projectId},"demo-prod%2f${releaseVersion}-prod.yaml",base64Content)
+                    gitlab.CreateRepoFile(${projectId},"demo-prod%2fprod-${releaseVersion}.yaml",base64Content)
                 }catch(e){
-                    gitlab.UpdateRepoFile(${projectId},"demo-prod%2f${releaseVersion}-prod.yaml",base64Content)
+                    gitlab.UpdateRepoFile(${projectId},"demo-prod%2fprod-${releaseVersion}.yaml",base64Content)
                 }
             }
         }
