@@ -139,8 +139,8 @@ spec:
                 stagOldVersion = stagFileData["metadata"]["resourceVersion"]
                 //更新镜像和version
                 tools.PrintMes("STAG OLD IMAGES --> ${stagOldImage}","green")
-                stagResponse.replace(stagOldImage,uatImage)
-                stagResponse.replace(stagOldVersion,"")
+                stagResponse = stagResponse.replace(stagOldImage,uatImage)
+                stagResponse = stagResponse.replace(stagOldVersion,"")
 
                 //生成最新版本的STAG版本文件
                 //文件转换，上传文件
@@ -178,8 +178,8 @@ spec:
                 prodOldVersion = prodFileData["metadata"]["resourceVersion"]
                 //更新镜像和version
                 tools.PrintMes("PROD OLD IMAGES --> ${prodOldImage}","green")
-                prodResponse.replace(prodOldImage,stagImage)
-                prodResponse.replace(prodOldVersion,"")
+                prodResponse = prodResponse.replace(prodOldImage,stagImage)
+                prodResponse = prodResponse.replace(prodOldVersion,"")
 
                 //生成最新版本的PROD版本文件
                 //文件转换，上传文件
