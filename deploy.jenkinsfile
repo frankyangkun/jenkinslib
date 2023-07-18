@@ -1,0 +1,124 @@
+#!groovy
+@Library("jenkinslibrary@master") _
+
+String stackName = "${env.stackName}"
+String releaseVersion = "${env.releaseVersion}"
+
+def gitlab = new org.devops.gitlab()
+def k8s = new org.devops.kubernetes()
+
+pipeline{
+  agent{
+    /*node{
+      label 'node03'
+    }*/
+    kubernetes{
+      //inheritFrom 'maven-3.8.1' //没用
+      //label 'jenkinsagent'
+      label "jenkins-slave-jnlp2"
+      cloud 'kubernetes'
+      yaml '''
+---
+kind: Pod #Deployment改成Pod
+apiVersion: v1 #apps/v1改成v1
+metadata:
+  labels:
+    #jenkins3: slave3 
+    app: jenkinsagent #随便定义，不一定要和k8s插件自带的jenkins:slave一致
+  name: jenkinsagent #这个name加不加都不影响
+  namespace: devops
+spec:
+  #nodeName: node2
+  containers:
+    #- name: jenkinsagent
+    - name: jnlp #必须是jnlp
+      #image: jenkins/inbound-agent:3107.v665000b_51092-4 #这是jenkins slave专用的镜像,不能用jenkins原来的镜像
+      #image: jenkinsci/jnlp-slave:3.36-1
+      image: frankyang1988/jenkinsslave-maven:0328 #二次打包的jenkins/inbound-agent:3107.v665000b_51092-4镜像，包含了mvn
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        runAsUser: 0
+        privileged: true
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 512Mi
+      volumeMounts:
+        - name: jenkinsagent-workdir
+          #mountPath: /home/jenkins/agent/remoting
+          mountPath: /home/jenkins/workspace
+        #- name: buildtools 此方法失败，最终改为二次打包slave镜像，包含mvn
+        #  mountPath: /home/jenkins/buildtools
+        - name: docker
+          mountPath: /run/docker.sock
+        - name: docker-home
+          mountPath: /usr/bin/docker
+        - name: daemon
+          mountPath: /etc/docker
+        - name: kubectl-config
+          mountPath: /home/jenkins/.kube
+        - name: kubectl
+          mountPath: /usr/bin/kubectl
+        - name: maven-localrepo
+          mountPath: /root/.m2/repository
+      env: #定义全局的环境变量
+        - name: JENKINS_AGENT_WORKDIR
+          #value: /home/jenkins/agent/remoting
+          value: /home/jenkins/workspace
+  volumes:
+    - name: maven-localrepo
+      hostPath:
+        path: /root/data/devops/mavenlocalrepo
+        type: Directory
+    - name: jenkinsagent-workdir
+      hostPath:
+        path: /root/data/devops/jenkinsagent-workdir
+        type: Directory
+    #- name: buildtools 此方法失败，最终改为二次打包slave镜像，包含mvn
+    #  hostPath:
+    #    path: /usr/local/buildtools
+    #    type: Directory
+    - name: docker
+      hostPath:
+        path: /run/docker.sock
+        type: ""
+    - name: docker-home
+      hostPath:
+        path: /usr/bin/docker
+        type: ""
+    - name: daemon
+      hostPath:
+        path: /etc/docker
+        type: ""
+    - name: kubectl-config
+      hostPath:
+        path: /root/.kube
+        type: Directory
+    - name: kubectl
+      hostPath:
+        path: /usr/bin/kubectl
+        type: ""
+  serviceAccountName: jenkins
+
+'''
+    }
+  }
+
+  stages{
+    stage("Deploy"){
+      steps{
+        scripts{
+          //获取版本文件
+          stack = "${stackName}".toLowercase()
+          response = gitlab.GetRepoFile(11,"demo-${stack}%2f${releaseVersion}-${stack}.yaml")
+          //发布应用
+          k8s.UpdateDeployment("demo-${stack}","demoapp",response)
+          
+        }
+      }
+    }
+  }
+}
