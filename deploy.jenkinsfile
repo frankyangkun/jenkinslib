@@ -112,7 +112,7 @@ spec:
       steps{
         scripts{
           //获取版本文件
-          stack = "${stackName}".toLowercase()
+          stack = "${stackName}".toLowerCase()
           response = gitlab.GetRepoFile(11,"demo-${stack}%2f${releaseVersion}-${stack}.yaml")
           //发布应用
           k8s.UpdateDeployment("demo-${stack}","demoapp",response)
