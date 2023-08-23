@@ -1,8 +1,9 @@
 #!groovy
-@Library("jenkinslibrary@master") _
+@Library('jenkinslib@main') _
 
 String stackName = "${env.stackName}"
 String releaseVersion = "${env.releaseVersion}"
+String serviceName = "${env.serviceName}"
 
 def gitlab = new org.devops.gitlab()
 def k8s = new org.devops.kubernetes()
@@ -110,12 +111,12 @@ spec:
   stages{
     stage("Deploy"){
       steps{
-        scripts{
+        script{
           //获取版本文件
           stack = "${stackName}".toLowerCase()
-          response = gitlab.GetRepoFile(11,"demo-${stack}%2f${releaseVersion}-${stack}.yaml")
+          response = gitlab.GetRepoFile(7,"demo-${stack}%2f${stack}-${releaseVersion}.yaml")
           //发布应用
-          k8s.UpdateDeployment("demo-${stack}","demoapp",response)
+          k8s.UpdateDeployment("demo-${stack}","${serviceName}",response)
           
         }
       }
